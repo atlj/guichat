@@ -12,6 +12,6 @@ To change typing color you can:
     color green
     color red
     color cyan
-    colir white
+    color white
     
     
