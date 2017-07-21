@@ -4,20 +4,102 @@ import curses
 from curses.textpad import Textbox, rectangle
 import socket
 import menu
+import sys
+from time import ctime
 import form
 from threading import Thread
 import os
+from configparser import SafeConfigParser
 
 g = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #ft = 'localhost'
 #port = 2112
 nick = "Siz"
 nck = "Gelen"
+directory = os.path.dirname(os.path.realpath(__file__))
+real_directory = directory + '/'
+config_dirtoformat = '{}/config.ini'
+logdir = "{}/logs/".format(directory)
+config_dir = config_dirtoformat.format(directory)
+config = SafeConfigParser()
+timesplit = ctime().split(" ")
+logname = "guichatlog "+timesplit[2] +" "+ timesplit[1] +" "+ timesplit[4] +" "+ timesplit[3]
+if not os.path.exists("{}/logs/".format(directory)):
+    os.makedirs("{}/logs/".format(directory))
 
+
+def check():
+    global first_run, logging
+    if not os.path.isfile(config_dir):
+        first_run = 1
+        file = open(config_dir, "w")
+        config.read(config_dir)
+        config.add_section("main")
+        logging = "False"
+    else:
+        first_run = 0
+
+def saveload():
+    global ft, port, logging
+    if first_run:
+        file = open(config_dir, "w")
+        config.read(config_dir)
+        config.set("main", "ip",ft)
+        config.set("main", "port", str(port))
+        config.set("main", "logging", logging)
+        config.write(file)
+    config.read(config_dir)
+    ft = config.get("main", "ip")
+    port = int(config.get("main", "port"))
+    logging = config.get("main", "logging")
+ 
+ 
+def configscreen():
+    global first_run
+    list1 = ["IP VE PORT U AYARLA", "CHAT KAYDI"]
+    choice1= menu.create(list1)
+    if choice1 == 0:
+        setip()
+        first_run = 1
+        saveload()
+    else:
+        logconfig()
+        
+def logconfig():
+    global logging
+    global first_run
+    choice = menu.create(["CHATLOG U ETKINLESTIR", "CHATLOG U KAPAT"])
+    if choice == 0:
+        logging = "True"
+        print("Log aktiflestirildi uygulama tekrar baslatiliyor.")
+        first_run = 1
+        saveload()
+        sys.exit()
+    else:
+        logging = "False"
+        print("Log kapatildi uygulama tekrar baslatiliyor.")
+        first_run = 1
+        saveload()
+        sys.exit()
+
+
+def makelogfile():
+    global logfile
+    if logging == "True":
+        logfile = open(logdir+logname, "w")
+
+def writelog(veri):
+    if logging == "True":
+        logfile.write(veri)
+        logfile.flush()
+        os.fsync(logfile.fileno())
 def setmode():
     liste = ['Server', 'Client']
     mode = menu.create(liste)
     return mode
+
+def mainmenu():
+    return menu.create(["BASLAT", "CONFIG", "CIKIS"])
 
 def setip():
     global ft
@@ -128,6 +210,7 @@ def al(gelen,colrec,colsend):
         screen.clear()
         screen.refresh()
         gelenlist[10] = gelen
+        writelog(ctime().split(" ")[3]+"     "+gelen+"\n")
         for oge in gelenlist:
             if b < 11:
                 gelenlist[a]=gelenlist[b]
@@ -234,22 +317,31 @@ def main():
         """)
     input("")
     init()
-    setip()
-    if not setmode():
-        bind()
-        os.system("clear")
-        t1 = Thread(target=servreceive, args=())
-        t2 = Thread(target=gonder, args=())
-        t1.start()
-        t2.start()
-    else:
-        baglan()
-        os.system("clear")
-        t1= Thread(target=clireceive, args=())
-        t2 = Thread(target=cligonder, args=())
-        t1.start()
-        t2.start()
-  
+    check()
+    if first_run:
+        setip()
+    saveload()
+    makelogfile()
+    getchoice = mainmenu()
+    if getchoice == 0:
+        if not setmode():
+            bind()
+            os.system("clear")
+            t1 = Thread(target=servreceive, args=())
+            t2 = Thread(target=gonder, args=())
+            t1.start()
+            t2.start()
+        else:
+            baglan()
+            os.system("clear")
+            t1= Thread(target=clireceive, args=())
+            t2 = Thread(target=cligonder, args=())
+            t1.start()
+            t2.start()
+    if getchoice == 1:
+        configscreen()
+    if getchoice == 2:
+        sys.exit()
 def mainer():
     try:
         main()
@@ -257,6 +349,6 @@ def mainer():
         print(e)
         
 if __name__ == "__main__":
-    mainer()
+    main()
    
         
