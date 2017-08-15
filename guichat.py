@@ -1,5 +1,5 @@
 #-*-coding:utf8;-*-
-
+__version__ = 1.2
 import curses
 from curses.textpad import Textbox, rectangle
 import socket
@@ -9,13 +9,12 @@ from time import ctime
 import form
 from threading import Thread
 import os
+import json
 from configparser import SafeConfigParser
 
 g = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #ft = 'localhost'
 #port = 2112
-nick = "Siz"
-nck = "Gelen"
 directory = os.path.dirname(os.path.realpath(__file__))
 real_directory = directory + '/'
 config_dirtoformat = '{}/config.ini'
@@ -128,53 +127,31 @@ def clireceive():
     global nck
     while 1:
         msg = g.recv(1024).decode("utf-8")
-        if "color" in msg:
-            bolum = msg.split(" ")
-            bolum = bolum[-1]
-            if bolum == "green":
-                person = green
-            if bolum == "red":
-                person = red
-            if bolum == "white":
-                person = white
-            if bolum == "cyan":
-                person = cyan
-        if "nick" in msg:
-            bol = msg.split(" ")
-            nck = bol[-1] 
-        al("recv;"+nck+"> "+msg, person, you)
+        paket = json.loads(msg)
+        mesaj = paket["msg"]
+        nickname = paket["nick"]
+        al(nickname + " > " + mesaj)
            
 def servreceive():
-    global person
-    global nck
     while 1:
         msg = c.recv(1024).decode("utf-8")
-        if "color" in msg:
-            bolum = msg.split(" ")
-            bolum = bolum[-1]
-            if bolum == "green":
-                person = green
-            if bolum == "red":
-                person = red
-            if bolum == "white":
-                person = white
-            if bolum == "cyan":
-                person = cyan
-        if "nick" in msg:
-            bol = msg.split(" ")
-            nck = bol[-1] 
-
-        al("recv;"+nck+"> "+msg, person, you)      
+        paket = json.loads(msg)
+        mesaj = paket["msg"]
+        nickname = paket["nick"]
+        al(nickname + " > " + mesaj)      
         
 def send(msg):
-    g.send(bytes(msg, "UTF-8"))
+    package = {"msg":msg, "nick":nick, "clientname":"guichat v1.2"}
+    package = json.dumps(package)
+    g.send(bytes(package, "UTF-8"))
     
 def servsend(msg):
-    c.send(bytes(msg,"UTF-8"))
+    package = {"msg":msg, "nick":nick, "clientname":"guichat v1.2"}
+    package = json.dumps(package)
+    c.send(bytes(package,"UTF-8"))
 
 def init():
-    global person
-    global you
+    global nick
     global screen
     global red
     global green
@@ -195,12 +172,11 @@ def init():
     green = curses.color_pair(10)
     h = curses.A_NORMAL
     b = curses.A_BOLD
-    gelenlist = " ; "*10
+    gelenlist = "  "*10
     gelenlist = gelenlist.split(" ")
-    person = curses.color_pair(13)
-    you = curses.color_pair(13)
+    nick = "guichat_user"
     
-def al(gelen,colrec,colsend):
+def al(gelen):
       
     while 1:
         a = 0
@@ -215,16 +191,12 @@ def al(gelen,colrec,colsend):
             if b < 11:
                 gelenlist[a]=gelenlist[b]
             if a < 10:
-                gelenbol = gelenlist[a].split(";")
-                kind = gelenbol[0]
-                if kind == "recv":
-                    screen.addstr(c, 6, gelenbol[1], colrec)
-                if kind == "send":
-                    screen.addstr(c, 6, gelenbol[1], colsend)
+                screen.addstr(c, 6, gelenlist[a])
        
             a = a + 1
             b = b + 1
             c = c + 1
+        screen.addstr(19,12,"nick: "+nick)
         screen.refresh()    
         win.border(0)
         win.refresh()
@@ -233,7 +205,7 @@ def al(gelen,colrec,colsend):
         
 def gonder():
     global nick
-    global you
+    global yourcolor
     global mesaj
     global win
     win = curses.newwin(4, 24, 15, 9)
@@ -245,29 +217,30 @@ def gonder():
         except Exception as e:
             pass
         if "color" in mesaj:
-            bolum = mesaj.split(" ")
+            bolum = mesaj.split(" ")        
             bolum = bolum[-1]
             if bolum == "green":
-                you = green
+                yourcolor = green
             if bolum == "white":
-                you = white
+                yourcolor = white
             if bolum == "cyan":
-                you = cyan
+                yourcolor = cyan
             if bolum == "red":
-                you = red
+                yourcolor = red
         if "nick" in mesaj:
             bol = mesaj.split(" ")
             nick = bol[-1]
         if mesaj:
             if not mesaj == " ":
-                al("send;"+nick+"> "+mesaj, person, you)
+                al(nick+" > "+ mesaj)
+                servsend(mesaj)
         win.clear()
         win.border(0)
         win.refresh()
-        servsend(mesaj)
+        
 
 def cligonder():
-    global you
+    global yourcolor
     global win
     global mesaj
     global nick
@@ -283,23 +256,24 @@ def cligonder():
             bolum = mesaj.split(" ")
             bolum = bolum[-1]
             if bolum == "green":
-                you = green
+                yourcolor = green
             if bolum == "white":
-                you = white
+                yourcolor = white
             if bolum == "cyan":
-                you = cyan
+                yourcolor = cyan
             if bolum == "red":
-                you = red
+                yourcolor = red
         if "nick" in mesaj:
             bol = mesaj.split(" ")
             nick = bol[-1]
         if mesaj:
             if not mesaj == " ":
-                al("send;"+nick+"> "+mesaj, person, you)
+                al(nick + " > " + mesaj)
+                send(mesaj)
         win.clear()
         win.border(0)
         win.refresh()
-        send(mesaj)
+        
 
         
 def main():
@@ -309,7 +283,7 @@ def main():
 
 
                   GUICHAT
-              Created By: atli
+               Created By:atli
                github.com/atlj
         Devam Etmek Icin Bir Tusa Basin.
         
