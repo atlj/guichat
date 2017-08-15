@@ -127,18 +127,20 @@ def clireceive():
     global nck
     while 1:
         msg = g.recv(1024).decode("utf-8")
-        paket = json.loads(msg)
-        mesaj = paket["msg"]
-        nickname = paket["nick"]
-        al(nickname + " > " + mesaj)
+        if not msg == "":
+            paket = json.loads(msg)
+            mesaj = paket["msg"]
+            nickname = paket["nick"]
+            al(nickname + " > " + mesaj)
            
 def servreceive():
     while 1:
         msg = c.recv(1024).decode("utf-8")
-        paket = json.loads(msg)
-        mesaj = paket["msg"]
-        nickname = paket["nick"]
-        al(nickname + " > " + mesaj)      
+        if not msg == "":
+            paket = json.loads(msg)
+            mesaj = paket["msg"]
+            nickname = paket["nick"]
+            al(nickname + " > " + mesaj)      
         
 def send(msg):
     package = {"msg":msg, "nick":nick, "clientname":"guichat v1.2"}
